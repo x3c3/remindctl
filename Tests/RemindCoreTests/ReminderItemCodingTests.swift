@@ -18,6 +18,7 @@ struct ReminderItemCodingTests {
       priority: .none,
       dueDate: nil,
       alarmDate: Date(timeIntervalSince1970: 1_700_000_300),
+      recurrenceRule: RecurrenceRule(frequency: .weekly, interval: 2),
       listID: "list",
       listName: "Inbox"
     )
@@ -29,5 +30,6 @@ struct ReminderItemCodingTests {
     #expect(json.contains(#""creationDate""#))
     #expect(json.contains(#""url":"https:\/\/example.com""#))
     #expect(json.contains(#""alarmDate""#))
+    #expect(json.contains(#""recurrenceRule""#))
   }
 }

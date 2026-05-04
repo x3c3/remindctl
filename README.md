@@ -51,6 +51,7 @@ remindctl list Projects --create
 remindctl add "Buy milk"
 remindctl add --title "Call mom" --list Personal --due tomorrow
 remindctl add "Meeting" --due "2026-01-03 09:00" --alarm "2026-01-03 08:55"
+remindctl add "Take vitamins" --due tomorrow --repeat daily
 remindctl edit 1 --title "New title" --due 2026-01-04 --clear-alarm
 remindctl list Work Errands       # show reminders from multiple lists
 remindctl complete 1 2 3
@@ -63,7 +64,7 @@ remindctl authorize             # request permissions
 - `--json` emits JSON arrays/objects.
 - `--plain` emits tab-separated lines.
 - `--quiet` emits counts only.
-- JSON includes EventKit metadata such as `creationDate`, `url`, and `alarmDate` when available.
+- JSON includes EventKit metadata such as `creationDate`, `url`, `alarmDate`, and `recurrenceRule` when available.
   File/image attachments are not exposed by EventKit.
 
 ## Date formats
@@ -77,6 +78,13 @@ Accepted by `--due` and filters:
 Date-only due inputs create all-day reminders; date-time inputs create timed reminders.
 Timed due reminders get a notification alarm at the due time unless `--alarm` sets a different alarm time.
 Use `edit <id> --clear-alarm` to remove an alarm.
+
+## Repeat
+Use `--repeat` with `add` or `edit` for simple recurrence:
+- `daily`, `weekly`, `biweekly`, `monthly`, `yearly`
+- `every N days/weeks/months/years`
+
+Use `edit <id> --no-repeat` to clear recurrence.
 
 ## Permissions
 Run `remindctl authorize` to trigger the system prompt. If access is denied, enable

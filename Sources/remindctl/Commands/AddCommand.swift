@@ -20,6 +20,12 @@ enum AddCommand {
             .make(label: "alarm", names: [.short("a"), .long("alarm")], help: "Alarm date", parsing: .singleValue),
             .make(label: "notes", names: [.short("n"), .long("notes")], help: "Notes", parsing: .singleValue),
             .make(
+              label: "repeat",
+              names: [.short("r"), .long("repeat")],
+              help: "daily|weekly|biweekly|monthly|yearly|every N days/weeks/months/years",
+              parsing: .singleValue
+            ),
+            .make(
               label: "priority",
               names: [.short("p"), .long("priority")],
               help: "none|low|medium|high",
@@ -32,6 +38,7 @@ enum AddCommand {
         "remindctl add \"Buy milk\"",
         "remindctl add --title \"Call mom\" --list Personal --due tomorrow",
         "remindctl add \"Call mom\" --due \"2026-01-03 09:00\" --alarm \"2026-01-03 08:55\"",
+        "remindctl add \"Take vitamins\" --due tomorrow --repeat daily",
         "remindctl add \"Review docs\" --priority high",
       ]
     ) { values, runtime in
@@ -58,10 +65,12 @@ enum AddCommand {
       let notes = values.option("notes")
       let dueValue = values.option("due")
       let alarmValue = values.option("alarm")
+      let repeatValue = values.option("repeat")
       let priorityValue = values.option("priority")
 
       let dueDate = try dueValue.map(CommandHelpers.parseDueDate)
       let alarmDate = try alarmValue.map(CommandHelpers.parseDueDate)
+      let recurrenceRule = try repeatValue.map(CommandHelpers.parseRecurrence)
       let priority = try priorityValue.map(CommandHelpers.parsePriority) ?? .none
 
       let store = RemindersStore()
@@ -82,6 +91,7 @@ enum AddCommand {
         notes: notes,
         dueDate: dueDate,
         alarmDate: alarmDate,
+        recurrenceRule: recurrenceRule,
         priority: priority
       )
       let reminder = try await store.createReminder(draft, listName: targetList)

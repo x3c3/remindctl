@@ -113,6 +113,9 @@ public actor RemindersStore {
     } else if let dueDate = draft.dueDate, !dueDate.isDateOnly {
       reminder.addAlarm(EKAlarm(absoluteDate: dueDate.date))
     }
+    if let recurrenceRule = draft.recurrenceRule {
+      replaceRecurrence(on: reminder, with: recurrenceRule)
+    }
     try eventStore.save(reminder, commit: true)
     return item(from: reminder)
   }
@@ -139,6 +142,9 @@ public actor RemindersStore {
     }
     if let alarmDateUpdate = update.alarmDate {
       replaceAlarms(on: reminder, with: alarmDateUpdate?.date)
+    }
+    if let recurrenceUpdate = update.recurrenceRule {
+      replaceRecurrence(on: reminder, with: recurrenceUpdate)
     }
     if let priority = update.priority {
       reminder.priority = priority.eventKitValue
@@ -203,6 +209,7 @@ extension RemindersStore {
       let dueDateComponents: DateComponents?
       let dueDateIsAllDay: Bool
       let alarmDate: Date?
+      let recurrenceRule: RecurrenceRule?
       let listID: String
       let listName: String
     }
@@ -224,6 +231,7 @@ extension RemindersStore {
             dueDateComponents: components,
             dueDateIsAllDay: isAllDay(components),
             alarmDate: Self.alarmDate(from: reminder),
+            recurrenceRule: Self.recurrenceRule(from: reminder),
             listID: reminder.calendar.calendarIdentifier,
             listName: reminder.calendar.title
           )
@@ -245,6 +253,7 @@ extension RemindersStore {
         dueDate: date(from: data.dueDateComponents),
         dueDateIsAllDay: data.dueDateIsAllDay,
         alarmDate: data.alarmDate,
+        recurrenceRule: data.recurrenceRule,
         listID: data.listID,
         listName: data.listName
       )
@@ -296,6 +305,7 @@ extension RemindersStore {
       dueDate: date(from: components),
       dueDateIsAllDay: isAllDay(components),
       alarmDate: Self.alarmDate(from: reminder),
+      recurrenceRule: Self.recurrenceRule(from: reminder),
       listID: reminder.calendar.calendarIdentifier,
       listName: reminder.calendar.title
     )
@@ -314,5 +324,56 @@ extension RemindersStore {
     reminder.alarms?
       .compactMap(\.absoluteDate)
       .min()
+  }
+
+  private func replaceRecurrence(on reminder: EKReminder, with rule: RecurrenceRule?) {
+    for existing in reminder.recurrenceRules ?? [] {
+      reminder.removeRecurrenceRule(existing)
+    }
+    guard let rule else { return }
+    reminder.addRecurrenceRule(
+      EKRecurrenceRule(recurrenceWith: rule.eventKitFrequency, interval: rule.interval, end: nil))
+  }
+
+  private static func recurrenceRule(from reminder: EKReminder) -> RecurrenceRule? {
+    guard let rule = reminder.recurrenceRules?.first else { return nil }
+    guard let frequency = RecurrenceFrequency(eventKitFrequency: rule.frequency) else { return nil }
+    return RecurrenceRule(frequency: frequency, interval: rule.interval)
+  }
+}
+
+extension RecurrenceFrequency {
+  fileprivate init?(eventKitFrequency: EKRecurrenceFrequency) {
+    switch eventKitFrequency {
+    case .daily:
+      self = .daily
+    case .weekly:
+      self = .weekly
+    case .monthly:
+      self = .monthly
+    case .yearly:
+      self = .yearly
+    @unknown default:
+      return nil
+    }
+  }
+
+  fileprivate var eventKitFrequency: EKRecurrenceFrequency {
+    switch self {
+    case .daily:
+      return .daily
+    case .weekly:
+      return .weekly
+    case .monthly:
+      return .monthly
+    case .yearly:
+      return .yearly
+    }
+  }
+}
+
+extension RecurrenceRule {
+  fileprivate var eventKitFrequency: EKRecurrenceFrequency {
+    frequency.eventKitFrequency
   }
 }

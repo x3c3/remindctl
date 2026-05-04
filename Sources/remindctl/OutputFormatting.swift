@@ -54,7 +54,8 @@ enum OutputRenderer {
         reminder.dueDate.map {
           DateParsing.formatDisplay($0, isDateOnly: reminder.dueDateIsAllDay)
         } ?? "no due date"
-      Swift.print("✓ \(reminder.title) [\(reminder.listName)] — \(due)")
+      let recurrence = recurrenceSuffix(for: reminder)
+      Swift.print("✓ \(reminder.title) [\(reminder.listName)] — \(due)\(recurrence)")
     case .plain:
       Swift.print(plainLine(for: reminder))
     case .json:
@@ -104,7 +105,9 @@ enum OutputRenderer {
           DateParsing.formatDisplay($0, isDateOnly: reminder.dueDateIsAllDay)
         } ?? "no due date"
       let priority = reminder.priority == .none ? "" : " priority=\(reminder.priority.rawValue)"
-      Swift.print("[\(index + 1)] [\(status)] \(reminder.title) [\(reminder.listName)] — \(due)\(priority)")
+      let recurrence = recurrenceSuffix(for: reminder)
+      Swift.print(
+        "[\(index + 1)] [\(status)] \(reminder.title) [\(reminder.listName)] — \(due)\(priority)\(recurrence)")
     }
   }
 
@@ -178,5 +181,9 @@ enum OutputRenderer {
     formatter.timeZone = TimeZone.current
     formatter.dateFormat = "yyyy-MM-dd"
     return formatter
+  }
+
+  private static func recurrenceSuffix(for reminder: ReminderItem) -> String {
+    reminder.recurrenceRule.map { " repeat=\($0.displayString)" } ?? ""
   }
 }
