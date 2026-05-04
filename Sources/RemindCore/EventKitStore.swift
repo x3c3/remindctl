@@ -182,6 +182,7 @@ public actor RemindersStore {
       let id: String
       let title: String
       let notes: String?
+      let url: URL?
       let isCompleted: Bool
       let completionDate: Date?
       let creationDate: Date?
@@ -201,6 +202,7 @@ public actor RemindersStore {
             id: reminder.calendarItemIdentifier,
             title: reminder.title ?? "",
             notes: reminder.notes,
+            url: reminder.url,
             isCompleted: reminder.isCompleted,
             completionDate: reminder.completionDate,
             creationDate: reminder.creationDate,
@@ -220,6 +222,7 @@ public actor RemindersStore {
         id: data.id,
         title: data.title,
         notes: data.notes,
+        url: data.url,
         isCompleted: data.isCompleted,
         completionDate: data.completionDate,
         creationDate: data.creationDate,
@@ -269,6 +272,7 @@ public actor RemindersStore {
       id: reminder.calendarItemIdentifier,
       title: reminder.title ?? "",
       notes: reminder.notes,
+      url: reminder.url,
       isCompleted: reminder.isCompleted,
       completionDate: reminder.completionDate,
       creationDate: reminder.creationDate,

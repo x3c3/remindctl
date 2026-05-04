@@ -47,6 +47,7 @@ public struct ReminderItem: Identifiable, Codable, Sendable, Equatable {
   public let id: String
   public let title: String
   public let notes: String?
+  public let url: URL?
   public let isCompleted: Bool
   public let completionDate: Date?
   public let creationDate: Date?
@@ -60,6 +61,7 @@ public struct ReminderItem: Identifiable, Codable, Sendable, Equatable {
     id: String,
     title: String,
     notes: String?,
+    url: URL? = nil,
     isCompleted: Bool,
     completionDate: Date?,
     creationDate: Date? = nil,
@@ -72,6 +74,7 @@ public struct ReminderItem: Identifiable, Codable, Sendable, Equatable {
     self.id = id
     self.title = title
     self.notes = notes
+    self.url = url
     self.isCompleted = isCompleted
     self.completionDate = completionDate
     self.creationDate = creationDate
