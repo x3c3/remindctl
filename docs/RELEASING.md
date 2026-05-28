@@ -9,7 +9,7 @@
    - Update `version.env` to `X.Y.Z`.
    - Run `scripts/generate-version.sh` (refreshes `Sources/remindctl/Version.swift` + embedded Info.plist).
 2. Ensure checks are green
-   - `make check`
+   - `make check` (strict lint, tests, and the 90% coverage gate)
    - `make release-check TAG=vX.Y.Z`
 3. Commit and tag
    - `git tag -a vX.Y.Z -m "vX.Y.Z"`

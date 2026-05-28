@@ -17,6 +17,12 @@ remindctl today
 remindctl overdue
 remindctl open
 remindctl list Work Errands
+remindctl list --list-id 7A12
+remindctl search "milk"
+remindctl info 1
+remindctl doctor --for-agent
+remindctl export --list Work --export-format csv
+remindctl link 1
 
 remindctl edit 1 --title "New title" --due 2026-01-04
 remindctl complete 1 2 3
@@ -29,8 +35,9 @@ Indexes such as `1` come from the default reminder listing. Most commands also a
 
 - Uses Apple's public EventKit APIs, so changes sync through the normal Reminders and iCloud path.
 - Reads and updates reminders from scripts, terminals, CI helpers, and local agents.
-- Supports due dates, alarms, recurrence, priorities, notes, lists, completion, deletion, and location triggers.
-- Emits JSON for automation, TSV with `--plain`, and compact human output by default.
+- Supports due dates, alarms, recurrence, priorities, notes, exact list IDs, completion, deletion, and location triggers.
+- Emits JSON for automation, TSV with `--plain`, tables with `--format table`, and compact human output by default.
+- Includes `doctor`, `export`, `link`, `open`, and shell completion helpers for agent workflows.
 - Stays inside public EventKit limits. Private Reminders.app features such as tags, sections, smart lists, attachments, and the "Urgent" toggle are not exposed.
 
 ## Pick your path

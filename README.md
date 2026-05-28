@@ -295,7 +295,7 @@ Supporting those would require Apple to expose new public APIs or a separate non
 
 ```bash
 make remindctl ARGS="status"   # clean build + run
-make check                     # lint + tests + coverage gate
+make check                     # strict lint + tests + 90% coverage gate
 make release-check TAG=vX.Y.Z  # validate release preflight
 pnpm build                     # release build into ./bin/remindctl
 ```
