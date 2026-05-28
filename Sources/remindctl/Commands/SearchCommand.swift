@@ -19,7 +19,13 @@ enum SearchCommand {
               names: [.short("l"), .long("list")],
               help: "Limit to a specific list",
               parsing: .singleValue
-            )
+            ),
+            .make(
+              label: "listID",
+              names: [.long("list-id")],
+              help: "Limit to a list by ID or ID prefix",
+              parsing: .singleValue
+            ),
           ],
           flags: [
             .make(label: "completed", names: [.long("completed")], help: "Include completed reminders")
@@ -38,7 +44,8 @@ enum SearchCommand {
 
       let store = RemindersStore()
       try await store.requestAccess()
-      let reminders = try await store.reminders(in: values.option("list"))
+      let listTarget = try CommandHelpers.listTarget(name: values.option("list"), id: values.option("listID"))
+      let reminders = try await store.reminders(matching: listTarget)
       let includeCompleted = values.flag("completed")
       let matches = reminders.filter { reminder in
         (includeCompleted || !reminder.isCompleted)

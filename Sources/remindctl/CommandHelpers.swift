@@ -47,6 +47,30 @@ enum CommandHelpers {
     return try IDResolver.resolve(inputs, from: reminders, numericFrom: defaultShowReminders)
   }
 
+  static func listTarget(name: String?, id: String?) throws -> ReminderListTarget? {
+    if let name, let id, !name.isEmpty, !id.isEmpty {
+      throw RemindCoreError.operationFailed("Use either --list or --list-id, not both")
+    }
+    if let id, !id.isEmpty {
+      return .id(id)
+    }
+    if let name, !name.isEmpty {
+      return .name(name)
+    }
+    return nil
+  }
+
+  static func requiredListTarget(
+    name: String?,
+    id: String?,
+    argumentName: String = "list"
+  ) throws -> ReminderListTarget {
+    guard let target = try listTarget(name: name, id: id) else {
+      throw ParsedValuesError.missingArgument(argumentName)
+    }
+    return target
+  }
+
   static func reminder(_ reminder: ReminderItem, matchesSearch query: String) -> Bool {
     let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return false }

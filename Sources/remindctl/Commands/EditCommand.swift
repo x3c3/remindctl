@@ -16,6 +16,9 @@ enum EditCommand {
           options: [
             .make(label: "title", names: [.short("t"), .long("title")], help: "New title", parsing: .singleValue),
             .make(label: "list", names: [.short("l"), .long("list")], help: "Move to list", parsing: .singleValue),
+            .make(
+              label: "listID", names: [.long("list-id")], help: "Move to list by ID or ID prefix", parsing: .singleValue
+            ),
             .make(label: "due", names: [.short("d"), .long("due")], help: "Set due date", parsing: .singleValue),
             .make(label: "alarm", names: [.short("a"), .long("alarm")], help: "Set alarm date", parsing: .singleValue),
             .make(label: "notes", names: [.short("n"), .long("notes")], help: "Set notes", parsing: .singleValue),
@@ -64,6 +67,7 @@ enum EditCommand {
 
       let title = values.option("title")
       let listName = values.option("list")
+      let listID = values.option("listID")
       let notes = values.option("notes")
       let alarmValue = values.option("alarm")
       let repeatValue = values.option("repeat")
@@ -113,8 +117,10 @@ enum EditCommand {
       }
       let isCompleted: Bool? = completeFlag ? true : (incompleteFlag ? false : nil)
 
+      let targetList = try CommandHelpers.listTarget(name: listName, id: listID)
+
       let hasChanges =
-        title != nil || listName != nil || notes != nil || dueUpdate != nil || alarmUpdate != nil || priority != nil
+        title != nil || targetList != nil || notes != nil || dueUpdate != nil || alarmUpdate != nil || priority != nil
         || recurrenceUpdate != nil || isCompleted != nil
       if !hasChanges {
         throw RemindCoreError.operationFailed("No changes specified")
@@ -127,7 +133,7 @@ enum EditCommand {
         alarmDate: alarmUpdate,
         recurrenceRule: recurrenceUpdate,
         priority: priority,
-        listName: listName,
+        listTarget: targetList,
         isCompleted: isCompleted
       )
 

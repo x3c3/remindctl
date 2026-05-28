@@ -16,6 +16,7 @@ enum AddCommand {
           options: [
             .make(label: "title", names: [.long("title")], help: "Reminder title", parsing: .singleValue),
             .make(label: "list", names: [.short("l"), .long("list")], help: "List name", parsing: .singleValue),
+            .make(label: "listID", names: [.long("list-id")], help: "List ID or ID prefix", parsing: .singleValue),
             .make(label: "due", names: [.short("d"), .long("due")], help: "Due date", parsing: .singleValue),
             .make(label: "alarm", names: [.short("a"), .long("alarm")], help: "Alarm date", parsing: .singleValue),
             .make(
@@ -78,6 +79,7 @@ enum AddCommand {
       }
 
       let listName = values.option("list")
+      let listID = values.option("listID")
       let notes = values.option("notes")
       let dueValue = values.option("due")
       let alarmValue = values.option("alarm")
@@ -99,11 +101,11 @@ enum AddCommand {
       let store = RemindersStore()
       try await store.requestAccess()
 
-      let targetList: String?
-      if let listName {
-        targetList = listName
+      let targetList: ReminderListTarget?
+      if let explicitTarget = try CommandHelpers.listTarget(name: listName, id: listID) {
+        targetList = explicitTarget
       } else {
-        targetList = await store.defaultListName()
+        targetList = await store.defaultList().map { .id($0.id) }
       }
       guard let targetList else {
         throw RemindCoreError.operationFailed("No default list found. Specify --list.")
@@ -118,7 +120,7 @@ enum AddCommand {
         locationTrigger: locationTrigger,
         priority: priority
       )
-      let reminder = try await store.createReminder(draft, listName: targetList)
+      let reminder = try await store.createReminder(draft, target: targetList)
       OutputRenderer.printReminder(reminder, format: runtime.outputFormat)
     }
   }

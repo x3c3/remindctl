@@ -15,11 +15,17 @@ enum ListCommand {
           ],
           options: [
             .make(
+              label: "listID",
+              names: [.long("list-id")],
+              help: "Target a list by ID or ID prefix",
+              parsing: .singleValue
+            ),
+            .make(
               label: "rename",
               names: [.short("r"), .long("rename")],
               help: "Rename the list",
               parsing: .singleValue
-            )
+            ),
           ],
           flags: [
             .make(label: "delete", names: [.short("d"), .long("delete")], help: "Delete the list"),
@@ -38,6 +44,7 @@ enum ListCommand {
       ]
     ) { values, runtime in
       let names = values.positional
+      let listID = values.option("listID")
       let renameTo = values.option("rename")
       let deleteList = values.flag("delete")
       let createList = values.flag("create")
@@ -46,33 +53,57 @@ enum ListCommand {
       let store = RemindersStore()
       try await store.requestAccess()
 
-      if !names.isEmpty {
-        let name = try singleListName(
-          names,
-          forMutation: deleteList || renameTo != nil || createList
-        )
+      if !names.isEmpty || listID != nil {
+        let isMutation = deleteList || renameTo != nil || createList
+        if shouldReadMultipleLists(names: names, listID: listID, isMutation: isMutation) {
+          let reminders = try await reminders(in: names, store: store)
+          OutputRenderer.printReminders(reminders, format: runtime.outputFormat)
+          return
+        }
+
+        let name: String? =
+          if names.isEmpty {
+            nil
+          } else {
+            try singleListName(names, forMutation: isMutation)
+          }
+        let target = try CommandHelpers.listTarget(name: name, id: listID)
+        if createList && listID != nil {
+          throw RemindCoreError.operationFailed("Use a list name, not --list-id, with --create")
+        }
         if deleteList {
+          guard let target else {
+            throw ParsedValuesError.missingArgument("name")
+          }
+          let title = try await store.resolveList(target).title
           if !force && !runtime.noInput && Console.isTTY {
-            if !Console.confirm("Delete list \"\(name)\"?", defaultValue: false) {
+            if !Console.confirm("Delete list \"\(title)\"?", defaultValue: false) {
               return
             }
           }
-          try await store.deleteList(name: name)
+          try await store.deleteList(target: target)
           if runtime.outputFormat == .standard {
-            Swift.print("Deleted list \"\(name)\"")
+            Swift.print("Deleted list \"\(title)\"")
           }
           return
         }
 
         if let renameTo {
-          try await store.renameList(oldName: name, newName: renameTo)
+          guard let target else {
+            throw ParsedValuesError.missingArgument("name")
+          }
+          let oldTitle = try await store.resolveList(target).title
+          try await store.renameList(target: target, newName: renameTo)
           if runtime.outputFormat == .standard {
-            Swift.print("Renamed list \"\(name)\" -> \"\(renameTo)\"")
+            Swift.print("Renamed list \"\(oldTitle)\" -> \"\(renameTo)\"")
           }
           return
         }
 
         if createList {
+          guard let name else {
+            throw ParsedValuesError.missingArgument("name")
+          }
           let list = try await store.createList(name: name)
           if runtime.outputFormat == .json {
             OutputRenderer.printLists(
@@ -85,7 +116,12 @@ enum ListCommand {
           return
         }
 
-        let reminders = try await reminders(in: names, store: store)
+        let reminders =
+          if let target {
+            try await store.reminders(matching: target)
+          } else {
+            try await reminders(in: names, store: store)
+          }
         OutputRenderer.printReminders(reminders, format: runtime.outputFormat)
         return
       }
@@ -125,11 +161,18 @@ enum ListCommand {
     return name
   }
 
+  static func shouldReadMultipleLists(names: [String], listID: String?, isMutation: Bool) -> Bool {
+    listID == nil && !isMutation && names.count > 1
+  }
+
   private static func reminders(in names: [String], store: RemindersStore) async throws -> [ReminderItem] {
     var reminders: [ReminderItem] = []
-    var seen = Set<String>()
-    for name in names where seen.insert(name).inserted {
-      reminders.append(contentsOf: try await store.reminders(in: name))
+    var seenNames = Set<String>()
+    var seenReminderIDs = Set<String>()
+    for name in names where seenNames.insert(name).inserted {
+      for reminder in try await store.reminders(in: name) where seenReminderIDs.insert(reminder.id).inserted {
+        reminders.append(reminder)
+      }
     }
     return reminders
   }

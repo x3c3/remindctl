@@ -53,22 +53,31 @@ public actor RemindersStore {
     }
   }
 
-  public func defaultListName() -> String? {
-    eventStore.defaultCalendarForNewReminders()?.title
+  public func resolveList(_ target: ReminderListTarget) async throws -> ReminderList {
+    let lists = await lists()
+    switch target {
+    case .name(let name):
+      return try ListResolver.resolve(name, in: lists)
+    case .id(let id):
+      return try ListResolver.resolveID(id, in: lists)
+    }
+  }
+
+  public func defaultListName() -> String? { defaultList()?.title }
+
+  public func defaultList() -> ReminderList? {
+    guard let calendar = eventStore.defaultCalendarForNewReminders() else {
+      return nil
+    }
+    return ReminderList(id: calendar.calendarIdentifier, title: calendar.title)
   }
 
   public func reminders(in listName: String? = nil) async throws -> [ReminderItem] {
-    let calendars: [EKCalendar]
-    if let listName {
-      calendars = eventStore.calendars(for: .reminder).filter { $0.title == listName }
-      if calendars.isEmpty {
-        throw RemindCoreError.listNotFound(listName)
-      }
-    } else {
-      calendars = eventStore.calendars(for: .reminder)
-    }
+    try await reminders(matching: listName.map(ReminderListTarget.name))
+  }
 
-    return await fetchReminders(in: calendars)
+  public func reminders(matching target: ReminderListTarget?) async throws -> [ReminderItem] {
+    await fetchReminders(in: try calendars(matching: target))
   }
 
   public func createList(name: String) async throws -> ReminderList {
@@ -83,7 +92,11 @@ public actor RemindersStore {
   }
 
   public func renameList(oldName: String, newName: String) async throws {
-    let calendar = try calendar(named: oldName)
+    try await renameList(target: .name(oldName), newName: newName)
+  }
+
+  public func renameList(target: ReminderListTarget, newName: String) async throws {
+    let calendar = try calendar(matching: target)
     guard calendar.allowsContentModifications else {
       throw RemindCoreError.operationFailed("Cannot modify system list")
     }
@@ -92,7 +105,11 @@ public actor RemindersStore {
   }
 
   public func deleteList(name: String) async throws {
-    let calendar = try calendar(named: name)
+    try await deleteList(target: .name(name))
+  }
+
+  public func deleteList(target: ReminderListTarget) async throws {
+    let calendar = try calendar(matching: target)
     guard calendar.allowsContentModifications else {
       throw RemindCoreError.operationFailed("Cannot delete system list")
     }
@@ -100,7 +117,11 @@ public actor RemindersStore {
   }
 
   public func createReminder(_ draft: ReminderDraft, listName: String) async throws -> ReminderItem {
-    let calendar = try calendar(named: listName)
+    try await createReminder(draft, target: .name(listName))
+  }
+
+  public func createReminder(_ draft: ReminderDraft, target: ReminderListTarget) async throws -> ReminderItem {
+    let calendar = try calendar(matching: target)
     let reminder = EKReminder(eventStore: eventStore)
     reminder.title = draft.title
     reminder.notes = draft.notes
@@ -153,8 +174,10 @@ public actor RemindersStore {
     if let priority = update.priority {
       reminder.priority = priority.eventKitValue
     }
-    if let listName = update.listName {
-      reminder.calendar = try calendar(named: listName)
+    if let listTarget = update.listTarget {
+      reminder.calendar = try calendar(matching: listTarget)
+    } else if let listName = update.listName {
+      reminder.calendar = try calendar(matching: .name(listName))
     }
     if let isCompleted = update.isCompleted {
       reminder.isCompleted = isCompleted
@@ -278,11 +301,48 @@ extension RemindersStore {
   }
 
   private func calendar(named name: String) throws -> EKCalendar {
-    let calendars = eventStore.calendars(for: .reminder).filter { $0.title == name }
-    guard let calendar = calendars.first else {
-      throw RemindCoreError.listNotFound(name)
+    try calendar(matching: .name(name))
+  }
+
+  private func calendar(matching target: ReminderListTarget) throws -> EKCalendar {
+    let resolved = try resolvedList(matching: target)
+    let calendars = eventStore.calendars(for: .reminder)
+    guard let calendar = calendars.first(where: { $0.calendarIdentifier == resolved.id }) else {
+      throw RemindCoreError.listNotFound(resolved.id)
     }
     return calendar
+  }
+
+  private func calendars(matching target: ReminderListTarget?) throws -> [EKCalendar] {
+    let calendars = eventStore.calendars(for: .reminder)
+    guard let target else {
+      return calendars
+    }
+
+    let lists = calendars.map { ReminderList(id: $0.calendarIdentifier, title: $0.title) }
+    switch target {
+    case .name(let name):
+      let resolved = try ListResolver.resolveForRead(name, in: lists)
+      let ids = Set(resolved.map(\.id))
+      return calendars.filter { ids.contains($0.calendarIdentifier) }
+    case .id:
+      let resolved = try resolvedList(matching: target, in: lists)
+      return calendars.filter { $0.calendarIdentifier == resolved.id }
+    }
+  }
+
+  private func resolvedList(matching target: ReminderListTarget) throws -> ReminderList {
+    let lists = eventStore.calendars(for: .reminder).map { ReminderList(id: $0.calendarIdentifier, title: $0.title) }
+    return try resolvedList(matching: target, in: lists)
+  }
+
+  private func resolvedList(matching target: ReminderListTarget, in lists: [ReminderList]) throws -> ReminderList {
+    switch target {
+    case .name(let name):
+      return try ListResolver.resolve(name, in: lists)
+    case .id(let id):
+      return try ListResolver.resolveID(id, in: lists)
+    }
   }
 
   private func calendarComponents(from parsed: ParsedUserDate) -> DateComponents {

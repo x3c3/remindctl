@@ -1,8 +1,9 @@
 import Foundation
 import RemindCore
 
-enum OutputFormat {
+enum OutputFormat: Equatable {
   case standard
+  case table
   case plain
   case json
   case quiet
@@ -20,11 +21,14 @@ struct AuthorizationSummary: Codable, Sendable, Equatable {
   let authorized: Bool
 }
 
+// swiftlint:disable:next type_body_length
 enum OutputRenderer {
   static func printReminders(_ reminders: [ReminderItem], format: OutputFormat) {
     switch format {
     case .standard:
       printRemindersStandard(reminders)
+    case .table:
+      printRemindersTable(reminders)
     case .plain:
       printRemindersPlain(reminders)
     case .json:
@@ -38,6 +42,8 @@ enum OutputRenderer {
     switch format {
     case .standard:
       printSearchResultsStandard(reminders)
+    case .table:
+      printRemindersTable(reminders)
     case .plain:
       printRemindersPlain(reminders)
     case .json:
@@ -51,6 +57,8 @@ enum OutputRenderer {
     switch format {
     case .standard:
       printListsStandard(summaries)
+    case .table:
+      printListsTable(summaries)
     case .plain:
       printListsPlain(summaries)
     case .json:
@@ -69,6 +77,8 @@ enum OutputRenderer {
         } ?? "no due date"
       let recurrence = recurrenceSuffix(for: reminder)
       Swift.print("✓ \(reminder.title) [\(reminder.listName)] — \(due)\(recurrence)")
+    case .table:
+      printRemindersTable([reminder])
     case .plain:
       Swift.print(plainLine(for: reminder))
     case .json:
@@ -81,6 +91,8 @@ enum OutputRenderer {
   static func printReminderDetail(_ reminder: ReminderItem, format: OutputFormat) {
     switch format {
     case .standard:
+      printReminderDetailStandard(reminder)
+    case .table:
       printReminderDetailStandard(reminder)
     case .plain:
       Swift.print(plainLine(for: reminder))
@@ -95,6 +107,8 @@ enum OutputRenderer {
     switch format {
     case .standard:
       Swift.print("Deleted \(count) reminder(s)")
+    case .table:
+      Swift.print("Deleted \(count) reminder(s)")
     case .plain:
       Swift.print("\(count)")
     case .json:
@@ -108,6 +122,8 @@ enum OutputRenderer {
   static func printAuthorizationStatus(_ status: RemindersAuthorizationStatus, format: OutputFormat) {
     switch format {
     case .standard:
+      Swift.print("Reminders access: \(status.displayName)")
+    case .table:
       Swift.print("Reminders access: \(status.displayName)")
     case .plain:
       Swift.print(status.rawValue)
@@ -141,6 +157,30 @@ enum OutputRenderer {
     let sorted = ReminderFiltering.sort(reminders)
     for reminder in sorted {
       Swift.print(plainLine(for: reminder))
+    }
+  }
+
+  private static func printRemindersTable(_ reminders: [ReminderItem]) {
+    let sorted = ReminderFiltering.sort(reminders)
+    guard !sorted.isEmpty else {
+      Swift.print("No reminders found")
+      return
+    }
+    Swift.print(["ID", "Status", "Due", "Priority", "List", "Title"].joined(separator: "\t"))
+    for reminder in sorted {
+      let due =
+        reminder.dueDate.map {
+          DateParsing.formatDisplay($0, isDateOnly: reminder.dueDateIsAllDay)
+        } ?? ""
+      Swift.print(
+        [
+          shortID(reminder.id),
+          reminder.isCompleted ? "done" : "open",
+          due,
+          reminder.priority == .none ? "" : reminder.priority.rawValue,
+          reminder.listName,
+          reminder.title,
+        ].joined(separator: "\t"))
     }
   }
 
@@ -238,7 +278,20 @@ enum OutputRenderer {
     }
   }
 
-  private static func printJSON<T: Encodable>(_ payload: T) {
+  private static func printListsTable(_ summaries: [ListSummary]) {
+    Swift.print(["ID", "Title", "Open", "Overdue"].joined(separator: "\t"))
+    for summary in summaries.sorted(by: { $0.title < $1.title }) {
+      Swift.print(
+        [
+          shortID(summary.id),
+          summary.title,
+          "\(summary.reminderCount)",
+          "\(summary.overdueCount)",
+        ].joined(separator: "\t"))
+    }
+  }
+
+  static func printJSON<T: Encodable>(_ payload: T) {
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
     encoder.dateEncodingStrategy = .iso8601
@@ -268,5 +321,9 @@ enum OutputRenderer {
 
   private static func recurrenceSuffix(for reminder: ReminderItem) -> String {
     reminder.recurrenceRule.map { " repeat=\($0.displayString)" } ?? ""
+  }
+
+  private static func shortID(_ id: String) -> String {
+    String(id.prefix(8))
   }
 }

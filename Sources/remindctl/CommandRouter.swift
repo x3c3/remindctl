@@ -21,6 +21,11 @@ struct CommandRouter {
       DeleteCommand.spec,
       StatusCommand.spec,
       AuthorizeCommand.spec,
+      DoctorCommand.spec,
+      ExportCommand.spec,
+      LinkCommand.spec,
+      OpenCommand.spec,
+      CompletionCommand.spec,
     ]
     let descriptor = CommandDescriptor(
       name: rootName,
@@ -64,6 +69,7 @@ struct CommandRouter {
       }
       let runtime = RuntimeOptions(parsedValues: invocation.parsedValues)
       do {
+        try runtime.validate()
         try await spec.run(invocation.parsedValues, runtime)
         return 0
       } catch {

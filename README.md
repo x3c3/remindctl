@@ -41,8 +41,12 @@ remindctl today
 remindctl overdue
 remindctl open
 remindctl list Work Errands
+remindctl list --list-id 7A12
 remindctl search "milk"
 remindctl info 1
+remindctl doctor --for-agent
+remindctl export --list Work --export-format csv
+remindctl link 1
 
 remindctl edit 1 --title "New title" --due 2026-01-04
 remindctl complete 1 2 3
@@ -61,6 +65,10 @@ Indexes such as `1` come from the default reminder listing. Most commands also a
 | `remindctl info <id>` | Show detailed reminder metadata |
 | `remindctl list` | Show reminder lists |
 | `remindctl list <name...>` | Show reminders from one or more lists |
+| `remindctl export` | Export reminders as JSON or CSV |
+| `remindctl link <id>` | Print a best-effort Reminders deep link |
+| `remindctl open <id>` | Open a reminder or list in Reminders.app |
+| `remindctl doctor` | Diagnose permissions and read-only rich-store access |
 | `remindctl add <title>` | Create a reminder |
 | `remindctl edit <id>` | Edit a reminder by index or ID prefix |
 | `remindctl complete <id...>` | Mark reminders complete |
@@ -107,6 +115,7 @@ Limit a view to one list:
 
 ```bash
 remindctl show overdue --list Work
+remindctl show overdue --list-id 7A12
 ```
 
 Show multiple lists together:
@@ -126,6 +135,17 @@ remindctl list OldList --delete --force
 ```
 
 Mutating list operations accept one list name. Read-only list views can accept multiple names.
+List names resolve by exact match, case-insensitive match, then a normalized match that ignores emoji and punctuation. If a name is ambiguous, use `--list-id`.
+
+Exact list targeting:
+
+```bash
+remindctl list --list-id 7A12
+remindctl add "Review notes" --list-id 7A12
+remindctl edit 4A83 --list-id 7A12
+remindctl list --list-id 7A12 --rename Archive
+remindctl list --list-id 7A12 --delete --force
+```
 
 ## Dates And Due Times
 
@@ -185,6 +205,7 @@ Global output flags:
 
 - `--json` emits machine-readable JSON.
 - `--plain` emits stable tab-separated lines.
+- `--format table` emits tabular output for scan-heavy commands.
 - `--quiet` emits minimal output, usually counts or nothing.
 - `--no-color` disables colored output.
 - `--no-input` disables interactive prompts.
@@ -202,9 +223,27 @@ Example:
 
 ```bash
 remindctl all --json
+remindctl today --format table
 remindctl list --json
 remindctl status --json
 ```
+
+## Export, Links, And Completion
+
+```bash
+remindctl export --json
+remindctl export --list Work --export-format csv
+remindctl link 1
+remindctl link --list-id 7A12
+remindctl open 1
+remindctl open --list Work
+remindctl open --list Work --app
+remindctl open --app
+remindctl completion zsh
+```
+
+`link` and `open <id>` use best-effort Reminders deep links based on EventKit IDs. `open --list Work`
+keeps the historical open-reminders filter; add `--app` to open that list in Reminders.app.
 
 ## Permissions
 
@@ -212,6 +251,7 @@ Check access:
 
 ```bash
 remindctl status
+remindctl doctor --for-agent
 ```
 
 Request access:
@@ -256,6 +296,7 @@ Supporting those would require Apple to expose new public APIs or a separate non
 ```bash
 make remindctl ARGS="status"   # clean build + run
 make check                     # lint + tests + coverage gate
+make release-check TAG=vX.Y.Z  # validate release preflight
 pnpm build                     # release build into ./bin/remindctl
 ```
 

@@ -1,6 +1,17 @@
 import Commander
 
 enum CommandSignatures {
+  static func runtimeOptions() -> [OptionDefinition] {
+    [
+      .make(
+        label: "format",
+        names: [.long("format")],
+        help: "Output format: standard|table|plain|json|quiet",
+        parsing: .singleValue
+      )
+    ]
+  }
+
   static func runtimeFlags() -> [FlagDefinition] {
     [
       .make(
@@ -34,7 +45,7 @@ enum CommandSignatures {
   static func withRuntimeFlags(_ signature: CommandSignature) -> CommandSignature {
     CommandSignature(
       arguments: signature.arguments,
-      options: signature.options,
+      options: signature.options + runtimeOptions(),
       flags: signature.flags + runtimeFlags(),
       optionGroups: signature.optionGroups
     )

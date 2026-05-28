@@ -23,7 +23,13 @@ enum ShowCommand {
               names: [.short("l"), .long("list")],
               help: "Limit to a specific list",
               parsing: .singleValue
-            )
+            ),
+            .make(
+              label: "listID",
+              names: [.long("list-id")],
+              help: "Limit to a list by ID or ID prefix",
+              parsing: .singleValue
+            ),
           ]
         )
       ),
@@ -35,7 +41,7 @@ enum ShowCommand {
         "remindctl show --list Work",
       ]
     ) { values, runtime in
-      let listName = values.option("list")
+      let listTarget = try CommandHelpers.listTarget(name: values.option("list"), id: values.option("listID"))
       let filterToken = values.argument(0)
 
       let filter: ReminderFilter
@@ -50,7 +56,7 @@ enum ShowCommand {
 
       let store = RemindersStore()
       try await store.requestAccess()
-      let reminders = try await store.reminders(in: listName)
+      let reminders = try await store.reminders(matching: listTarget)
       let filtered = ReminderFiltering.apply(reminders, filter: filter)
       OutputRenderer.printReminders(filtered, format: runtime.outputFormat)
     }

@@ -74,6 +74,11 @@ public struct ReminderList: Identifiable, Codable, Sendable, Equatable {
   }
 }
 
+public enum ReminderListTarget: Sendable, Equatable {
+  case name(String)
+  case id(String)
+}
+
 public enum LocationProximity: String, Codable, CaseIterable, Sendable {
   case arriving
   case leaving
@@ -192,6 +197,7 @@ public struct ReminderUpdate: Sendable {
   public let recurrenceRule: RecurrenceRule??
   public let priority: ReminderPriority?
   public let listName: String?
+  public let listTarget: ReminderListTarget?
   public let isCompleted: Bool?
 
   public init(
@@ -202,6 +208,7 @@ public struct ReminderUpdate: Sendable {
     recurrenceRule: RecurrenceRule?? = nil,
     priority: ReminderPriority? = nil,
     listName: String? = nil,
+    listTarget: ReminderListTarget? = nil,
     isCompleted: Bool? = nil
   ) {
     self.title = title
@@ -211,6 +218,7 @@ public struct ReminderUpdate: Sendable {
     self.recurrenceRule = recurrenceRule
     self.priority = priority
     self.listName = listName
+    self.listTarget = listTarget
     self.isCompleted = isCompleted
   }
 }

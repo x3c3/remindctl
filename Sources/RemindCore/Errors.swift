@@ -4,6 +4,7 @@ public enum RemindCoreError: LocalizedError, Sendable, Equatable {
   case accessDenied
   case writeOnlyAccess
   case listNotFound(String)
+  case ambiguousList(String, matches: [String])
   case reminderNotFound(String)
   case ambiguousIdentifier(String, matches: [String])
   case invalidIdentifier(String)
@@ -29,6 +30,8 @@ public enum RemindCoreError: LocalizedError, Sendable, Equatable {
       ].joined(separator: " ")
     case .listNotFound(let name):
       return "List not found: \"\(name)\"."
+    case .ambiguousList(let name, let matches):
+      return "List \"\(name)\" matches multiple lists: \(matches.joined(separator: ", "))."
     case .reminderNotFound(let id):
       return "Reminder not found: \"\(id)\"."
     case .ambiguousIdentifier(let input, let matches):
