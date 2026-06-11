@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.3.1 - Unreleased
+- Add support for setting the reminder URL field via `--url` on `add`/`edit` and `--clear-url` on `edit`; thanks @jeremylahners.
 - Redesign the GitHub Pages documentation site with light/dark mode and a reminder-focused overview.
 
 ## 0.3.0 - 2026-05-28
